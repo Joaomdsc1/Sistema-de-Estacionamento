@@ -4,6 +4,12 @@ import requests
 from datetime import datetime
 import re
 
+# Funções auxiliares
+def exibir_mensagem(mensagem):
+    tempo = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    resultado_text.insert(tk.END, f"{tempo} - {mensagem}\n")
+    resultado_text.see(tk.END)
+
 # Funções de consulta e cadastro
 def consultar_placas():
     try:
@@ -11,52 +17,53 @@ def consultar_placas():
         if response.status_code == 200:
             placas = response.json()
             resultado_text.delete(1.0, tk.END)
-            resultado_text.insert(tk.END, "\n".join(placas))
+            exibir_mensagem("Placas cadastradas:")
+            for placa in placas:
+                exibir_mensagem(placa)
         else:
             resultado_text.delete(1.0, tk.END)
-            resultado_text.insert(tk.END, "Erro: Não foi possível buscar as placas.")
+            exibir_mensagem("Erro: Não foi possível buscar as placas.")
     except Exception as e:
         resultado_text.delete(1.0, tk.END)
-        resultado_text.insert(tk.END, f"Erro de Conexão: {str(e)}")
+        exibir_mensagem(f"Erro de Conexão: {str(e)}")
 
 def cadastrar_placa(placa):
-    formato_placa = r"^[A-Z]{3}-\d{4}$"
+    formato_placa = "^[A-Z]{3}-\\d{4}$"
     if not re.match(formato_placa, placa):
         resultado_text.delete(1.0, tk.END)
-        resultado_text.insert(tk.END, "Placa inválida! Formato esperado: ABC-1234")
+        exibir_mensagem("Placa inválida! Formato esperado: ABC-1234")
         return
 
-    tempo = datetime.now().strftime('%Y-%m-%d %H:%M:%S') 
     try:
         response = requests.post("http://127.0.0.1:5000/cadastrar_placa", json={"placa": placa})
         if response.status_code == 201:
             resultado_text.delete(1.0, tk.END)
-            resultado_text.insert(tk.END, f"{tempo} - Placa cadastrada com sucesso!")
+            exibir_mensagem("Placa cadastrada com sucesso!")
         elif response.status_code == 400:
             resultado_text.delete(1.0, tk.END)
-            resultado_text.insert(tk.END, response.json().get('message', 'Erro desconhecido.'))
+            exibir_mensagem(response.json().get('message', 'Erro desconhecido.'))
         else:
             resultado_text.delete(1.0, tk.END)
-            resultado_text.insert(tk.END, "Erro: Não foi possível cadastrar a placa.")
+            exibir_mensagem("Erro: Não foi possível cadastrar a placa.")
     except Exception as e:
         resultado_text.delete(1.0, tk.END)
-        resultado_text.insert(tk.END, f"Erro de Conexão: {str(e)}")
+        exibir_mensagem(f"Erro de Conexão: {str(e)}")
 
 def consultar_vagas_disponiveis():
     try:
         response = requests.get("http://127.0.0.1:5000/vagas_disponiveis")
         if response.status_code == 200:
             vagas = response.json()
-            vagas_ocupadas = 1000 - vagas
+            vagas_ocupadas = 100 - vagas
             resultado_text.delete(1.0, tk.END)
-            resultado_text.insert(tk.END, f'Vagas Disponíveis: {vagas}')
-            resultado_text.insert(tk.END, f"\nVagas Ocupadas: {vagas_ocupadas}")
+            exibir_mensagem(f'Vagas Disponíveis: {vagas}')
+            exibir_mensagem(f"Vagas Ocupadas: {vagas_ocupadas}")
         else:
             resultado_text.delete(1.0, tk.END)
-            resultado_text.insert(tk.END, "Erro: Não foi possível buscar as vagas.")
+            exibir_mensagem("Erro: Não foi possível buscar as vagas.")
     except Exception as e:
         resultado_text.delete(1.0, tk.END)
-        resultado_text.insert(tk.END, f"Erro de Conexão: {str(e)}")
+        exibir_mensagem(f"Erro de Conexão: {str(e)}")
 
 def consultar_permanencia_saldo(placa):
     try:
@@ -67,13 +74,15 @@ def consultar_permanencia_saldo(placa):
             permanencia1 = dados.get("data_saida")
             saldo = dados.get("saldo")
             resultado_text.delete(1.0, tk.END)
-            resultado_text.insert(tk.END, f"Hora de Entrada: {permanencia}\nHora de saída: {permanencia1}\nSaldo: {saldo}")
+            exibir_mensagem(f"Hora de Entrada: {permanencia}")
+            exibir_mensagem(f"Hora de saída: {permanencia1}")
+            exibir_mensagem(f"Saldo: {saldo}")
         else:
             resultado_text.delete(1.0, tk.END)
-            resultado_text.insert(tk.END, "Erro: Não foi possível buscar os dados.")
+            exibir_mensagem("Erro: Não foi possível buscar os dados.")
     except Exception as e:
         resultado_text.delete(1.0, tk.END)
-        resultado_text.insert(tk.END, f"Erro de Conexão: {str(e)}")
+        exibir_mensagem(f"Erro de Conexão: {str(e)}")
 
 def consultar_planos_fidelidade():
     planos = [
@@ -85,7 +94,7 @@ def consultar_planos_fidelidade():
     planos_info = "\n\n".join([f"Plano: {p['nome']}\nBenefícios: {p['beneficios']}\nRequisitos: {p['requisitos']}" for p in planos])
 
     resultado_text.delete(1.0, tk.END)
-    resultado_text.insert(tk.END, planos_info)
+    exibir_mensagem(planos_info)
 
 # Configuração da interface principal com abas
 root = tk.Tk()
@@ -157,25 +166,3 @@ scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 resultado_text.config(yscrollcommand=scrollbar.set)
 
 root.mainloop()
-
-
-### app.py
-
-from flask import Flask, request, jsonify
-import sqlite3
-from datetime import datetime
-import re
-
-app = Flask(__name__)
-
-def inicializar_vagas():
-    conn = sqlite3.connect('estacionamento.db')
-    cursor = conn.cursor()
-
-    cursor.execute("DELETE FROM Placas")
-    cursor.execute("DELETE FROM Vagas")
-
-    for numero_vaga in range(1, 1001):
-        cursor.execute("INSERT INTO Vagas (numero_vaga, ocupada) VALUES (?, ?)", (numero_vaga, 0))
-
-    conn.commit

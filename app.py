@@ -12,7 +12,7 @@ def inicializar_vagas():
     cursor.execute("DELETE FROM Placas")
     cursor.execute("DELETE FROM Vagas")
 
-    for numero_vaga in range(1, 1001):
+    for numero_vaga in range(1, 101):
         cursor.execute("INSERT INTO Vagas (numero_vaga, ocupada) VALUES (?, ?)", (numero_vaga, 0))
 
     conn.commit()
