@@ -28,6 +28,7 @@ def consultar_placas():
         exibir_mensagem(f"Erro de Conexão: {str(e)}")
 
 def cadastrar_placa(placa):
+    placa = placa.upper()  # Converte a placa para maiúsculas
     formato_placa = "^[A-Z]{3}-\\d{4}$"
     if not re.match(formato_placa, placa):
         resultado_text.delete(1.0, tk.END)
@@ -48,6 +49,7 @@ def cadastrar_placa(placa):
     except Exception as e:
         resultado_text.delete(1.0, tk.END)
         exibir_mensagem(f"Erro de Conexão: {str(e)}")
+
 
 def consultar_vagas_disponiveis():
     try:

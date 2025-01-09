@@ -12,20 +12,23 @@ def inicializar_vagas():
     cursor.execute("DELETE FROM Placas")
     cursor.execute("DELETE FROM Vagas")
 
-    for numero_vaga in range(1, 101):
+    for numero_vaga in range(1, 101):  # Número de vagas ajustado para 100
         cursor.execute("INSERT INTO Vagas (numero_vaga, ocupada) VALUES (?, ?)", (numero_vaga, 0))
 
     conn.commit()
     conn.close()
 
-# Rota para cadastrar uma nova placa
 @app.route('/cadastrar_placa', methods=['POST'])
 def cadastrar_placa():
     data = request.json
     placa = data.get('placa')
 
+    if not placa:
+        return jsonify({'message': 'Placa não pode ser vazia!'}), 400
+
+    placa = placa.upper()  # Converte a placa para maiúsculas para padronização
     formato_placa = "^[A-Z]{3}-\d{4}$"
-    if not placa or not re.match(formato_placa, placa):
+    if not re.match(formato_placa, placa):
         return jsonify({'message': 'Placa inválida! Formato esperado: ABC-1234'}), 400
 
     conn = sqlite3.connect('estacionamento.db')
@@ -53,7 +56,7 @@ def cadastrar_placa():
     else:
         return jsonify({'message': 'Não há vagas disponíveis!'}), 400
 
-# Rota para verificar vagas não ocupadas
+
 @app.route('/vagas_disponiveis', methods=['GET'])
 def vagas_disponiveis():
     conn = sqlite3.connect('estacionamento.db')
@@ -63,15 +66,15 @@ def vagas_disponiveis():
     conn.close()
     return jsonify(vagas_disponiveis)
 
-# Rota para consultar tempo de permanência e saldo
 @app.route('/tempo_e_saldo/<placa>', methods=['GET'])
 def tempo_e_saldo(placa):
+    placa = placa.upper()  # Converte a placa para maiúsculas para padronização
     conn = sqlite3.connect('estacionamento.db')
     cursor = conn.cursor()
-    
+
     cursor.execute("SELECT data_entrada FROM Placas WHERE placa = ?", (placa,))
     resultado = cursor.fetchone()
-    
+
     if resultado:
         data_entrada = resultado[0]
         data_saida = datetime.now()
@@ -87,19 +90,21 @@ def tempo_e_saldo(placa):
         return jsonify({'message': 'Placa não encontrada!'}), 404
 
 def calcular_saldo(tempo_permanencia):
-    return tempo_permanencia.total_seconds() / 3600 * 5
+    total_minutos = tempo_permanencia.total_seconds() / 60
 
-# Rota para consultar planos de fidelidade
-@app.route('/planos', methods=['GET'])
-def planos():
-    conn = sqlite3.connect('estacionamento.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM Planos")
-    planos = cursor.fetchall()
-    conn.close()
-    return jsonify(planos)
+    if total_minutos <= 15:
+        return 0
+    elif total_minutos <= 30:
+        return 10
+    elif total_minutos <= 45:
+        return 15
+    elif total_minutos <= 60:
+        return 22
+    else:
+        minutos_adicionais = total_minutos - 60
+        intervalos_adicionais = (minutos_adicionais // 15) + (1 if minutos_adicionais % 15 > 0 else 0)
+        return 22 + intervalos_adicionais * 10
 
-# Rota para consultar todas as placas
 @app.route('/placas', methods=['GET'])
 def consultar_placas():
     conn = sqlite3.connect('estacionamento.db')
