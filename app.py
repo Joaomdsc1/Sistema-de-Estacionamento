@@ -66,28 +66,47 @@ def vagas_disponiveis():
     conn.close()
     return jsonify(vagas_disponiveis)
 
+@app.route('/tempo_e_saldo', methods=['GET'])
 @app.route('/tempo_e_saldo/<placa>', methods=['GET'])
-def tempo_e_saldo(placa):
-    placa = placa.upper()  # Converte a placa para maiúsculas para padronização
+def tempo_e_saldo(placa=None):
     conn = sqlite3.connect('estacionamento.db')
     cursor = conn.cursor()
 
-    cursor.execute("SELECT data_entrada FROM Placas WHERE placa = ?", (placa,))
-    resultado = cursor.fetchone()
+    if placa:
+        # Converte a placa para maiúsculas para padronização
+        placa = placa.upper()
+        cursor.execute("SELECT data_entrada FROM Placas WHERE placa = ?", (placa,))
+        resultado = cursor.fetchone()
 
-    if resultado:
-        data_entrada = resultado[0]
-        data_saida = datetime.now()
-        tempo_permanencia = data_saida - datetime.strptime(data_entrada, '%Y-%m-%d %H:%M:%S')
-        saldo = calcular_saldo(tempo_permanencia)
+        if resultado:
+            data_entrada = resultado[0]
+            data_saida = datetime.now()
+            tempo_permanencia = data_saida - datetime.strptime(data_entrada, '%Y-%m-%d %H:%M:%S')
+            saldo = calcular_saldo(tempo_permanencia)
 
-        return jsonify({
-            'data_entrada': data_entrada,
-            'data_saida': data_saida.strftime('%Y-%m-%d %H:%M:%S'),
-            'saldo': saldo
-        }), 200
+            return jsonify({
+                'data_entrada': data_entrada,
+                'data_saida': data_saida.strftime('%Y-%m-%d %H:%M:%S'),
+                'saldo': saldo
+            }), 200
+        else:
+            return jsonify({'message': 'Placa não encontrada!'}), 404
     else:
-        return jsonify({'message': 'Placa não encontrada!'}), 404
+        # Se nenhuma placa for passada, retorna todos os registros
+        cursor.execute("SELECT placa, data_entrada FROM Placas")
+        placas = cursor.fetchall()
+        registros = []
+        for placa, data_entrada in placas:
+            data_saida = datetime.now()
+            tempo_permanencia = data_saida - datetime.strptime(data_entrada, '%Y-%m-%d %H:%M:%S')
+            saldo = calcular_saldo(tempo_permanencia)
+            registros.append({
+                'placa': placa,
+                'data_entrada': data_entrada,
+                'data_saida': data_saida.strftime('%Y-%m-%d %H:%M:%S'),
+                'saldo': saldo
+            })
+        return jsonify(registros), 200
 
 def calcular_saldo(tempo_permanencia):
     total_minutos = tempo_permanencia.total_seconds() / 60

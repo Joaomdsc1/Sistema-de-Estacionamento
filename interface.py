@@ -69,16 +69,25 @@ def consultar_vagas_disponiveis():
 
 def consultar_permanencia_saldo(placa):
     try:
-        response = requests.get(f"http://127.0.0.1:5000/tempo_e_saldo/{placa}")
+        if placa.strip():  # Se uma placa foi informada
+            response = requests.get(f"http://127.0.0.1:5000/tempo_e_saldo/{placa}")
+        else:  # Se nenhuma placa foi informada
+            response = requests.get("http://127.0.0.1:5000/tempo_e_saldo")
+
         if response.status_code == 200:
             dados = response.json()
-            permanencia = dados.get("data_entrada")
-            permanencia1 = dados.get("data_saida")
-            saldo = dados.get("saldo")
             resultado_text.delete(1.0, tk.END)
-            exibir_mensagem(f"Hora de Entrada: {permanencia}")
-            exibir_mensagem(f"Hora de saída: {permanencia1}")
-            exibir_mensagem(f"Saldo: {saldo}")
+            if isinstance(dados, list):  # Se o resultado for uma lista (todas as placas)
+                for registro in dados:
+                    exibir_mensagem(f"Placa: {registro['placa']}")
+                    exibir_mensagem(f"Hora de Entrada: {registro['data_entrada']}")
+                    exibir_mensagem(f"Hora de Saída: {registro['data_saida']}")
+                    exibir_mensagem(f"Saldo: {registro['saldo']}")
+                    exibir_mensagem("-" * 40)
+            else:  # Resultado único (uma placa)
+                exibir_mensagem(f"Hora de Entrada: {dados['data_entrada']}")
+                exibir_mensagem(f"Hora de Saída: {dados['data_saida']}")
+                exibir_mensagem(f"Saldo: {dados['saldo']}")
         else:
             resultado_text.delete(1.0, tk.END)
             exibir_mensagem("Erro: Não foi possível buscar os dados.")
