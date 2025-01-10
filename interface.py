@@ -107,6 +107,33 @@ def consultar_planos_fidelidade():
     resultado_text.delete(1.0, tk.END)
     exibir_mensagem(planos_info)
 
+def dar_baixa_carro(placa):
+    try:
+        if not placa.strip():
+            resultado_text.delete(1.0, tk.END)
+            exibir_mensagem("Erro: Placa não pode ser vazia!")
+            return
+
+        response = requests.post("http://127.0.0.1:5000/dar_baixa", json={"placa": placa})
+
+        if response.status_code == 200:
+            resultado_text.delete(1.0, tk.END)
+            exibir_mensagem(response.json().get('message', 'Carro removido com sucesso!'))
+        elif response.status_code == 404:
+            resultado_text.delete(1.0, tk.END)
+            exibir_mensagem(response.json().get('message', 'Placa não encontrada!'))
+        elif response.status_code == 400:
+            resultado_text.delete(1.0, tk.END)
+            exibir_mensagem(response.json().get('message', 'Erro na solicitação!'))
+        else:
+            resultado_text.delete(1.0, tk.END)
+            exibir_mensagem(f"Erro inesperado: {response.text}")
+    except requests.exceptions.RequestException as e:
+        resultado_text.delete(1.0, tk.END)
+        exibir_mensagem(f"Erro de Conexão: {str(e)}")
+
+
+
 # Configuração da interface principal com abas
 root = tk.Tk()
 root.title("Gerenciador do Estacionamento")
@@ -164,6 +191,18 @@ frame_planos = ttk.Frame(notebook)
 notebook.add(frame_planos, text="Consulta de Planos")
 btn_consultar_planos = ttk.Button(frame_planos, text="Consultar Planos de Fidelidade", command=consultar_planos_fidelidade)
 btn_consultar_planos.pack(pady=10)
+
+# Aba para Baixa de Carros
+frame_baixa = ttk.Frame(notebook)
+notebook.add(frame_baixa, text="Dar Baixa no Carro")
+
+ttk.Label(frame_baixa, text="Número da Placa:").pack(pady=5)
+entry_baixa_placa = ttk.Entry(frame_baixa, font=("Helvetica", 12))
+entry_baixa_placa.pack(pady=5)
+
+btn_dar_baixa = ttk.Button(frame_baixa, text="Dar Baixa no Carro", command=lambda: dar_baixa_carro(entry_baixa_placa.get()))
+btn_dar_baixa.pack(pady=10)
+
 
 # Widget de texto com rolagem para exibir resultados
 resultado_text_frame = ttk.Frame(root)

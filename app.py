@@ -136,3 +136,39 @@ def consultar_placas():
 if __name__ == '__main__':
     inicializar_vagas()
     app.run(debug=True)
+
+@app.route('/dar_baixa', methods=['POST'])
+def dar_baixa():
+    data = request.json
+    placa = data.get('placa')
+
+    if not placa:
+        return jsonify({'message': 'Placa não pode ser vazia!'}), 400
+
+    placa = placa.upper()  # Padroniza a placa em maiúsculas
+    conn = sqlite3.connect('estacionamento.db')
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id FROM Placas WHERE placa = ?", (placa,))
+    resultado = cursor.fetchone()
+
+    if resultado:
+        try:
+            # Deleta a placa da tabela
+            cursor.execute("DELETE FROM Placas WHERE placa = ?", (placa,))
+
+            # Libera uma vaga associada
+            cursor.execute("""
+                UPDATE Vagas
+                SET ocupada = 0
+                WHERE id = (SELECT id FROM Vagas WHERE ocupada = 1 LIMIT 1)
+            """)
+
+            conn.commit()
+            return jsonify({'message': 'Carro removido com sucesso e vaga liberada!'}), 200
+        except Exception as e:
+            return jsonify({'message': f'Erro ao dar baixa: {str(e)}'}), 500
+        finally:
+            conn.close()
+    else:
+        return jsonify({'message': 'Placa não encontrada!'}), 404
